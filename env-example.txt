@@ -1,0 +1,22 @@
+# Evolution API Configuration
+EVOLUTION_API_URL=https://n8n-evolution-api.o5ynml.easypanel.host
+EVOLUTION_API_TOKEN=F802E5ABFA6E-417B-A05D-856C7CB32C41
+EVOLUTION_INSTANCE_NAME=Elis.IA
+
+# n8n Configuration  
+N8N_WEBHOOK_URL=https://n8n.elisia.site/webhook/jump-sheets
+N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTc1MDE2NC02YjI5LTQ5M2YtYmFmZS04YWIxNzA5NDA3ZDgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzUzMTE4NzA3LCJleHAiOjE3NTU2NTg4MDB9.gB6nmNbJVVm8Z_8I5oayIqkM2vrKqHO_OR0AQmctjgE
+
+# Supabase Configuration
+SUPABASE_URL=https://mudmrbtnppvjmyvgypst.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11ZG1yYnRucHB2am15dmd5cHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5Njk3MzAsImV4cCI6MjA2NDU0NTczMH0.niP03h2lr5aHZWYXkWLv4Wnn70tLBsX_gTpYLhYmMB0
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11ZG1yYnRucHB2am15dmd5cHN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODk2OTczMCwiZXhwIjoyMDY0NTQ1NzMwfQ.gUjgPDLOQOjB8S_pYWWZmic_GyhZEFBpal8Nr6kv3lo
+
+# Security Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=elis-dashboard-secret-key-2025-very-secure-random-string-here
+WEBHOOK_SECRET=webhook-validation-secret-key-for-security-purposes
+
+# App Configuration
+NODE_ENV=development
+APP_URL=http://localhost:3000 
