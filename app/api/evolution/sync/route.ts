@@ -250,7 +250,7 @@ async function processEvolutionMessage(message: any) {
     // Verificar se contact foi criado com sucesso
     if (!contact) {
       console.error('❌ Erro: Não foi possível criar ou encontrar contato para:', phone)
-      continue
+      return
     }
 
     // Buscar conversa
@@ -273,6 +273,12 @@ async function processEvolutionMessage(message: any) {
         .single()
       
       conversation = newConversation
+    }
+    
+    // Verificar se conversation foi criada com sucesso
+    if (!conversation) {
+      console.error('❌ Erro: Não foi possível criar ou encontrar conversa para:', message.key.remoteJid)
+      return
     }
     
     // Extrair conteúdo da mensagem

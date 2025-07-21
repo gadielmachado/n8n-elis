@@ -106,6 +106,7 @@ class ApiClient {
       evolution_api: boolean
       n8n: boolean
     }
+    details: any
     timestamp: string
   }> {
     const response = await this.client.get('/api/health')
