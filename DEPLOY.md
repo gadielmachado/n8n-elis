@@ -7,6 +7,18 @@
 - Supabase configurado
 - Evolution API funcionando
 
+## ⚡ Build Fixes
+
+### TypeScript Configuration
+- **Target**: ES2017 (para suporte a Set spread operator)
+- **Lib**: Inclui ES2017 para funcionalidades modernas
+- **Downlevel Iteration**: Suportado via target ES2017+
+
+### Compatibility Fixes
+- Substituído `[...new Set()]` por `Array.from(new Set())` 
+- Target atualizado de ES5 para ES2017
+- Melhor compatibilidade com Vercel build
+
 ## 🔧 Configuração das Variáveis de Ambiente
 
 No Vercel, adicione todas as variáveis do arquivo `env-example.txt`:
@@ -60,6 +72,11 @@ curl -X POST "https://sua-evolution-api.com/webhook/set/SUA_INSTANCIA" \
 3. Logs em tempo real no painel Vercel
 
 ## 🐛 Troubleshooting
+
+### Erro de Build TypeScript:
+- ✅ **FIXO**: Target ES2017, Array.from() compatibility
+- Verificar sintaxe ES2017+ no código
+- Usar Array.from() em vez de spread operator para Sets
 
 ### Erro 500 nas APIs:
 - Verificar variáveis de ambiente

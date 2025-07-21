@@ -108,7 +108,7 @@ async function getChartData(): Promise<ChartData[]> {
     
     // Obter contatos únicos que responderam
     const uniqueRespondedContacts = respondedLeads ? 
-      [...new Set(respondedLeads.map(item => item.contact_id))] : []
+      Array.from(new Set(respondedLeads.map(item => item.contact_id))) : []
     const respondedCount = uniqueRespondedContacts.length
     const noResponseCount = totalCount - respondedCount
 
