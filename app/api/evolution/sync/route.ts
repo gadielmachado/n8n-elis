@@ -93,6 +93,12 @@ async function syncContacts() {
     
     for (const contact of contacts) {
       try {
+        // Verificar se contact e contact.id existem
+        if (!contact || !contact.id) {
+          console.warn('⚠️ Contato inválido encontrado, pulando...')
+          continue
+        }
+
         // Buscar ou criar contato no banco
         const phone = contact.id.replace('@s.whatsapp.net', '').replace('@c.us', '')
         
@@ -100,8 +106,8 @@ async function syncContacts() {
           .from('contacts')
           .upsert({
             phone,
-            name: contact.pushName,
-            push_name: contact.pushName,
+            name: contact.pushName || 'Nome não disponível',
+            push_name: contact.pushName || 'Nome não disponível',
             last_seen: new Date().toISOString()
           }, {
             onConflict: 'phone'
@@ -226,7 +232,7 @@ async function processEvolutionMessage(message: any) {
       .eq('phone', phone)
       .single()
     
-    // Criar contato se não existir
+        // Criar contato se não existir
     if (!contact) {
       const { data: newContact } = await supabaseAdmin
         .from('contacts')
@@ -240,7 +246,13 @@ async function processEvolutionMessage(message: any) {
       
       contact = newContact
     }
-    
+
+    // Verificar se contact foi criado com sucesso
+    if (!contact) {
+      console.error('❌ Erro: Não foi possível criar ou encontrar contato para:', phone)
+      continue
+    }
+
     // Buscar conversa
     let { data: conversation } = await supabaseAdmin
       .from('conversations')
