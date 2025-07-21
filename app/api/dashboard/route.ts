@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { DashboardMetrics, ChartData, WeeklyData } from '@/types'
 
+// 🚀 Dashboard API - Métricas e dados para gráficos (Updated for Vercel)
 // GET - Buscar métricas do dashboard
 export async function GET(request: NextRequest) {
   try {
