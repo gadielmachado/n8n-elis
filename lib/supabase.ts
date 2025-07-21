@@ -1,17 +1,53 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
+// Cache para clientes Supabase
+let _supabase: SupabaseClient | null = null
+let _supabaseAdmin: SupabaseClient | null = null
 
-// Cliente público (frontend)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Função para validar e obter variáveis de ambiente
+function getEnvVar(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Environment variable ${name} is required but not set. Please check your .env file or Vercel environment variables.`)
+  }
+  return value
+}
 
-// Cliente administrativo (backend/APIs)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+// Cliente público (frontend) - lazy loading
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = getEnvVar('SUPABASE_URL')
+    const supabaseAnonKey = getEnvVar('SUPABASE_ANON_KEY')
+    _supabase = createClient(supabaseUrl, supabaseAnonKey)
+  }
+  return _supabase
+}
+
+// Cliente administrativo (backend/APIs) - lazy loading
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!_supabaseAdmin) {
+    const supabaseUrl = getEnvVar('SUPABASE_URL')
+    const supabaseServiceKey = getEnvVar('SUPABASE_SERVICE_KEY')
+    _supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  }
+  return _supabaseAdmin
+}
+
+// Exportações para compatibilidade (lazy)
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    return getSupabase()[prop as keyof SupabaseClient]
+  }
+})
+
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    return getSupabaseAdmin()[prop as keyof SupabaseClient]
   }
 })
 
