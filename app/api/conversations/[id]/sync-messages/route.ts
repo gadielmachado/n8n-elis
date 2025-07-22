@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { evolutionAPI } from '@/lib/evolution-api'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Interface para tipagem da resposta do Supabase
+interface ConversationWithContact {
+  id: string
+  remote_jid: string
+  contact: {
+    id: string
+    phone: string
+    name: string
+  } | {
+    id: string
+    phone: string
+    name: string
+  }[] | null
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -29,7 +44,10 @@ export async function POST(
       )
     }
 
-    const remoteJid = conversation.remote_jid
+    // Tipar a conversa para evitar erros do TypeScript
+    const typedConversation = conversation as ConversationWithContact
+
+    const remoteJid = typedConversation.remote_jid
     
     // Buscar mensagens desta conversa na Evolution API
     console.log(`📱 Buscando mensagens da Evolution API para: ${remoteJid}`)
@@ -57,13 +75,17 @@ export async function POST(
                        message.message?.imageMessage?.caption ||
                        '[Mídia]'
 
-                 // Obter ID do contato (pode ser array ou objeto)
-         const contactId = Array.isArray(conversation.contact) 
-           ? conversation.contact[0]?.id 
-           : conversation.contact?.id
+         // Obter ID do contato de forma mais robusta
+         let contactId: string | undefined
+         
+         if (Array.isArray(typedConversation.contact)) {
+           contactId = typedConversation.contact[0]?.id
+         } else if (typedConversation.contact && typeof typedConversation.contact === 'object') {
+           contactId = typedConversation.contact.id
+         }
 
          if (!contactId) {
-           console.error('❌ Contact ID não encontrado:', conversation.contact)
+           console.error('❌ Contact ID não encontrado:', typedConversation.contact)
            errorCount++
            continue
          }
@@ -110,10 +132,14 @@ export async function POST(
 
     console.log(`✅ Sincronização concluída: ${syncedCount} mensagens sincronizadas, ${errorCount} erros`)
 
-    // Obter dados do contato (pode ser array ou objeto)
-    const contactData = Array.isArray(conversation.contact) 
-      ? conversation.contact[0] 
-      : conversation.contact
+    // Obter dados do contato de forma mais robusta
+    let contactData: { id: string; phone: string; name: string } | null = null
+    
+    if (Array.isArray(typedConversation.contact)) {
+      contactData = typedConversation.contact[0] || null
+    } else if (typedConversation.contact && typeof typedConversation.contact === 'object') {
+      contactData = typedConversation.contact
+    }
 
     return NextResponse.json({
       success: true,

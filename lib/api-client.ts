@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
-import { DashboardMetrics, ChartData, WeeklyData, Conversation } from '@/types'
+import { DashboardMetrics, ChartData, WeeklyData, Conversation, Message } from '@/types'
 
 // Função para detectar a URL base da aplicação
 function getBaseUrl(): string {
