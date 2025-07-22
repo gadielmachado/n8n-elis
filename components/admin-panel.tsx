@@ -32,7 +32,9 @@ interface SyncResult {
 }
 
 export function AdminPanel() {
-  const [health, setHealth] = useState<HealthStatus | null>(null)
+  const [health, setHealth] = useState<any>(null)
+  const [syncResult, setSyncResult] = useState<any>(null)
+  const [testResult, setTestResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [syncLoading, setSyncLoading] = useState<string | null>(null)
   const [syncResults, setSyncResults] = useState<{ [key: string]: SyncResult }>({})
@@ -86,6 +88,32 @@ export function AdminPanel() {
     }
   }
 
+  const testEvolutionConnection = async () => {
+    setLoading(true)
+    setTestResult(null)
+    
+    try {
+      const response = await fetch('/api/test-evolution')
+      const data = await response.json()
+      setTestResult(data)
+      
+      if (data.success) {
+        alert('✅ Conexão com Evolution API funcionando!')
+      } else {
+        alert(`❌ Erro na conexão: ${data.message}`)
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: 'Erro ao testar conexão',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      })
+      alert('❌ Erro ao testar conexão')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getStatusIcon = (healthy: boolean) => {
     return healthy ? (
       <CheckCircle className="w-5 h-5 text-green-500" />
@@ -104,14 +132,55 @@ export function AdminPanel() {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Painel Administrativo
         </h2>
-        <button
-          onClick={checkHealth}
-          disabled={loading}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-          Atualizar Status
-        </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <button
+            onClick={checkHealth}
+            disabled={loading}
+            className="btn btn-primary"
+          >
+            {loading ? 'Verificando...' : '🔍 Verificar Saúde'}
+          </button>
+
+          <button
+            onClick={testEvolutionConnection}
+            disabled={loading}
+            className="btn btn-secondary"
+          >
+            {loading ? 'Testando...' : '⚡ Testar Evolution API'}
+          </button>
+
+          <button
+            onClick={() => handleSync('all')}
+            disabled={syncLoading === 'all'}
+            className="btn btn-secondary"
+          >
+            {syncLoading === 'all' ? 'Sincronizando...' : '🔄 Sincronizar Tudo'}
+          </button>
+
+          <button
+            onClick={() => handleSync('contacts')}
+            disabled={syncLoading === 'contacts'}
+            className="btn btn-outline"
+          >
+            {syncLoading === 'contacts' ? 'Sincronizando...' : '👥 Sync Contatos'}
+          </button>
+
+          <button
+            onClick={() => handleSync('chats')}
+            disabled={syncLoading === 'chats'}
+            className="btn btn-outline"
+          >
+            {syncLoading === 'chats' ? 'Sincronizando...' : '💬 Sync Conversas'}
+          </button>
+
+          <button
+            onClick={() => handleSync('messages')}
+            disabled={syncLoading === 'messages'}
+            className="btn btn-outline"
+          >
+            {syncLoading === 'messages' ? 'Sincronizando...' : '📝 Sync Mensagens'}
+          </button>
+        </div>
       </div>
 
       {/* Status dos Serviços */}
@@ -261,6 +330,66 @@ export function AdminPanel() {
                 {process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE_NAME || 'Configurado'}
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado do Teste Evolution API */}
+      {testResult && (
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            {testResult.success ? '✅ Teste Evolution API' : '❌ Teste Evolution API'}
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <strong>Status:</strong>
+              <span className={cn(
+                "ml-2",
+                testResult.success ? 'text-green-600' : 'text-red-600'
+              )}>
+                {testResult.message}
+              </span>
+            </div>
+            
+            {testResult.results && (
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Detalhes dos Testes:</h4>
+                
+                {/* Configuração de Ambiente */}
+                <div className="mb-3">
+                  <strong>Variáveis de Ambiente:</strong>
+                  <ul className="ml-4 mt-1">
+                    <li>URL: {testResult.results.environment?.url}</li>
+                    <li>Token: {testResult.results.environment?.token}</li>
+                    <li>Instância: {testResult.results.environment?.instance}</li>
+                  </ul>
+                </div>
+                
+                {/* Resultados dos Testes */}
+                {testResult.results.tests && Object.entries(testResult.results.tests).map(([testName, result]: [string, any]) => (
+                  <div key={testName} className="mb-2">
+                    <span className={cn(
+                      "inline-block w-3 h-3 rounded-full mr-2",
+                      result.success ? 'bg-green-500' : 'bg-red-500'
+                    )}></span>
+                    <strong>{testName}:</strong> {result.success ? 'Passou' : result.error}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Próximos Passos */}
+            {testResult.nextSteps && testResult.nextSteps.length > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Próximos Passos:</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {testResult.nextSteps.map((step: string, index: number) => (
+                    <li key={index} className="text-sm">{step}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}

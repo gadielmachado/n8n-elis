@@ -1,38 +1,72 @@
 import axios, { AxiosInstance } from 'axios'
 import { DashboardMetrics, ChartData, WeeklyData, Conversation } from '@/types'
 
+// Função para detectar a URL base da aplicação
+function getBaseUrl(): string {
+  // Em ambiente de servidor (API routes)
+  if (typeof window === 'undefined') {
+    // Em produção na Vercel
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`
+    }
+    
+    // URL configurada manualmente
+    if (process.env.NEXTAUTH_URL) {
+      return process.env.NEXTAUTH_URL
+    }
+    
+    // Fallback para desenvolvimento
+    return 'http://localhost:3000'
+  }
+  
+  // No cliente (browser), usar URL atual
+  return window.location.origin
+}
+
 class ApiClient {
   private client: AxiosInstance
 
   constructor() {
+    const baseURL = getBaseUrl()
+    
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
       timeout: 30000
     })
 
-    // Interceptor para logs (remover em produção)
+    // Interceptor para logs detalhados
     this.client.interceptors.request.use(request => {
       console.log('🔄 API Request:', {
         method: request.method?.toUpperCase(),
-        url: request.url
+        url: `${baseURL}${request.url}`,
+        baseURL
       })
       return request
     })
 
     this.client.interceptors.response.use(
-      response => response,
+      response => {
+        console.log('✅ API Response:', {
+          status: response.status,
+          url: response.config.url
+        })
+        return response
+      },
       error => {
         console.error('❌ API Error:', {
           status: error.response?.status,
           url: error.config?.url,
-          message: error.response?.data?.error || error.message
+          message: error.response?.data?.error || error.message,
+          baseURL
         })
         throw error
       }
     )
+
+    console.log('🔧 API Client initialized with baseURL:', baseURL)
   }
 
   // Dashboard APIs

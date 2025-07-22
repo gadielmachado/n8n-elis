@@ -49,7 +49,12 @@ export interface EvolutionWebhookPayload {
       id: string
     }
     pushName?: string
-    message: any
+    message: {
+      conversation?: string
+      extendedTextMessage?: {
+        text: string
+      }
+    }
     messageTimestamp: number
     status?: string
   }
@@ -60,24 +65,23 @@ export interface EvolutionWebhookPayload {
   webhookUrl: string
 }
 
-export interface FindMessagesParams {
-  where?: {
-    owner?: string
-    key?: {
-      remoteJid?: string
-      fromMe?: boolean
-      id?: string
-    }
-  }
-  page?: number
-  offset?: number
+export interface EvolutionInstanceState {
+  state: string
+  qrcode?: string
+}
+
+export interface SyncOptions {
+  type: 'messages' | 'contacts' | 'chats' | 'all'
   limit?: number
 }
 
-export interface FindChatsParams {
-  page?: number
-  offset?: number
-  limit?: number
+// Função para validar e obter variáveis de ambiente da Evolution API
+function getEvolutionEnvVar(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Environment variable ${name} is required but not set. Please check your .env.local file or Vercel environment variables.`)
+  }
+  return value
 }
 
 export class EvolutionAPI {
@@ -87,46 +91,71 @@ export class EvolutionAPI {
   private instanceName: string
 
   constructor() {
-    this.baseUrl = process.env.EVOLUTION_API_URL!
-    this.apiKey = process.env.EVOLUTION_API_TOKEN!
-    this.instanceName = process.env.EVOLUTION_INSTANCE_NAME!
+    try {
+      this.baseUrl = getEvolutionEnvVar('EVOLUTION_API_URL')
+      this.apiKey = getEvolutionEnvVar('EVOLUTION_API_TOKEN')
+      this.instanceName = getEvolutionEnvVar('EVOLUTION_INSTANCE_NAME')
 
-    this.client = axios.create({
-      baseURL: this.baseUrl,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': this.apiKey
-      },
-      timeout: 30000
-    })
-
-    // Interceptor para logs (remover em produção)
-    this.client.interceptors.request.use(request => {
-      console.log('🔄 Evolution API Request:', {
-        method: request.method?.toUpperCase(),
-        url: request.url,
-        headers: request.headers
-      })
-      return request
-    })
-
-    this.client.interceptors.response.use(
-      response => {
-        console.log('✅ Evolution API Response:', {
-          status: response.status,
-          url: response.config.url
-        })
-        return response
-      },
-      error => {
-        console.error('❌ Evolution API Error:', {
-          status: error.response?.status,
-          url: error.config?.url,
-          data: error.response?.data
-        })
-        throw error
+      // Validar formato da URL
+      if (!this.baseUrl.startsWith('http://') && !this.baseUrl.startsWith('https://')) {
+        throw new Error('EVOLUTION_API_URL must start with http:// or https://')
       }
-    )
+
+      this.client = axios.create({
+        baseURL: this.baseUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.apiKey
+        },
+        timeout: 30000
+      })
+
+      // Interceptor para logs detalhados
+      this.client.interceptors.request.use(request => {
+        console.log('🔄 Evolution API Request:', {
+          method: request.method?.toUpperCase(),
+          url: `${this.baseUrl}${request.url}`,
+          headers: {
+            'Content-Type': request.headers['Content-Type'],
+            'apikey': this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'NOT_SET'
+          },
+          instance: this.instanceName
+        })
+        return request
+      })
+
+      this.client.interceptors.response.use(
+        response => {
+          console.log('✅ Evolution API Response:', {
+            status: response.status,
+            url: response.config.url,
+            data: response.data ? 'Data received' : 'No data'
+          })
+          return response
+        },
+        error => {
+          console.error('❌ Evolution API Error:', {
+            status: error.response?.status,
+            url: error.config?.url,
+            message: error.message,
+            data: error.response?.data,
+            baseURL: this.baseUrl,
+            instance: this.instanceName
+          })
+          throw error
+        }
+      )
+
+      console.log('🔧 Evolution API initialized:', {
+        baseUrl: this.baseUrl,
+        instance: this.instanceName,
+        tokenConfigured: !!this.apiKey
+      })
+
+    } catch (error) {
+      console.error('❌ Failed to initialize Evolution API:', error)
+      throw error
+    }
   }
 
   // 1. Instance Management
