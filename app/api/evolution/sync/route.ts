@@ -151,15 +151,25 @@ async function syncChats() {
           id: chat.id,
           name: chat.name,
           isGroup: chat.isGroup,
-          lastMessageTimestamp: chat.lastMessageTimestamp
+          lastMessageTimestamp: chat.lastMessageTimestamp,
+          hasLastMessage: !!chat.lastMessage,
+          remoteJid: chat.lastMessage?.key?.remoteJid
         })}`
         
         logs.push(chatLog)
         console.log(chatLog)
         
-        // Verificar se chat.id existe
-        if (!chat.id) {
-          const warnMsg = '⚠️ Chat sem ID: ' + JSON.stringify(chat)
+        // Extrair ID do chat - usar remoteJid da lastMessage se chat.id for null
+        let chatId = chat.id
+        if (!chatId && chat.lastMessage?.key?.remoteJid) {
+          chatId = chat.lastMessage.key.remoteJid
+          logs.push(`🔄 Chat sem ID direto, usando remoteJid da lastMessage: ${chatId}`)
+          console.log(`🔄 Chat sem ID direto, usando remoteJid da lastMessage: ${chatId}`)
+        }
+        
+        // Verificar se conseguimos obter um ID válido
+        if (!chatId) {
+          const warnMsg = '⚠️ Chat sem ID válido: ' + JSON.stringify(chat)
           logs.push(warnMsg)
           console.warn(warnMsg)
           continue
@@ -167,21 +177,21 @@ async function syncChats() {
         
         // Pular grupos por enquanto (focar em conversas individuais)
         if (chat.isGroup) {
-          const groupMsg = `📝 Pulando grupo: ${chat.name || chat.id}`
+          const groupMsg = `📝 Pulando grupo: ${chat.name || chatId}`
           logs.push(groupMsg)
           console.log(groupMsg)
           continue
         }
         
         // Extrair telefone do chat ID
-        const phone = evolutionAPI.extractPhoneFromJid(chat.id)
-        const phoneMsg = `📞 Telefone extraído: "${phone}" do JID: "${chat.id}"`
+        const phone = evolutionAPI.extractPhoneFromJid(chatId)
+        const phoneMsg = `📞 Telefone extraído: "${phone}" do JID: "${chatId}"`
         logs.push(phoneMsg)
         console.log(phoneMsg)
         
         // Verificar se conseguiu extrair o telefone
         if (!phone || phone.length < 8) {
-          const phoneWarn = `⚠️ Telefone inválido extraído: ${JSON.stringify({ phone, jid: chat.id })}`
+          const phoneWarn = `⚠️ Telefone inválido extraído: ${JSON.stringify({ phone, jid: chatId })}`
           logs.push(phoneWarn)
           console.warn(phoneWarn)
           continue
@@ -255,7 +265,7 @@ async function syncChats() {
             .from('conversations')
             .upsert({
               contact_id: contact.id,
-              remote_jid: chat.id,
+              remote_jid: chatId,
               status: chat.archived ? 'archived' : 'active',
               last_message_at: lastMessageAt,
               messages_count: 0,
