@@ -52,71 +52,138 @@ export async function POST(
     // Buscar mensagens desta conversa na Evolution API
     console.log(`📱 Buscando mensagens da Evolution API para: ${remoteJid}`)
     
-    const messages = await evolutionAPI.findMessages({
-      where: {
-        key: {
-          remoteJid: remoteJid
-        }
-      },
-      limit: 100
-    })
+    // Buscar mensagens de múltiplas formas para garantir que pegamos todas
+    let messages: any[] = []
+    
+    try {
+      // Método 1: Buscar por remoteJid específico
+      const method1 = await evolutionAPI.findMessages({
+        where: {
+          key: {
+            remoteJid: remoteJid
+          }
+        },
+        limit: 500
+      })
+      
+      if (method1 && method1.length > 0) {
+        messages = messages.concat(method1)
+      }
+      
+      // Método 2: Buscar sem filtros específicos (todas as mensagens)
+      if (messages.length === 0) {
+        console.log(`🔄 Tentando buscar todas as mensagens e filtrar localmente...`)
+        const allMessages = await evolutionAPI.findMessages({
+          limit: 1000
+        })
+        
+        // Filtrar mensagens que correspondem ao remoteJid
+        const filteredMessages = allMessages.filter((msg: any) => 
+          msg.key?.remoteJid === remoteJid ||
+          msg.key?.remoteJid === remoteJid.replace('@s.whatsapp.net', '@c.us') ||
+          msg.key?.remoteJid === remoteJid.replace('@c.us', '@s.whatsapp.net')
+        )
+        
+        messages = messages.concat(filteredMessages)
+      }
+      
+      // Remover duplicatas baseado no ID
+      messages = messages.filter((msg, index, arr) => 
+        arr.findIndex(m => m.key?.id === msg.key?.id) === index
+      )
+      
+    } catch (error) {
+      console.error('❌ Erro ao buscar mensagens da Evolution API:', error)
+      messages = []
+    }
 
     console.log(`📩 Encontradas ${messages.length} mensagens na Evolution API`)
 
     let syncedCount = 0
     let errorCount = 0
 
+    // Obter ID do contato de forma mais robusta
+    let contactId: string | undefined
+    
+    if (Array.isArray(typedConversation.contact)) {
+      contactId = typedConversation.contact[0]?.id
+    } else if (typedConversation.contact && typeof typedConversation.contact === 'object') {
+      contactId = typedConversation.contact.id
+    }
+
+    if (!contactId) {
+      console.error('❌ Contact ID não encontrado:', typedConversation.contact)
+      return NextResponse.json(
+        { success: false, error: 'Contato não encontrado na conversa' },
+        { status: 404 }
+      )
+    }
+
     // Processar cada mensagem
     for (const message of messages) {
       try {
+        // Validar se a mensagem tem os dados necessários
+        if (!message.key?.id || !message.messageTimestamp) {
+          console.warn('⚠️ Mensagem sem dados essenciais, pulando:', message.key?.id)
+          continue
+        }
+        
         // Extrair conteúdo da mensagem
-        const content = message.message?.conversation || 
-                       message.message?.extendedTextMessage?.text ||
-                       message.message?.imageMessage?.caption ||
-                       '[Mídia]'
+        let content = '[Mensagem sem conteúdo]'
+        
+        if (message.message?.conversation) {
+          content = message.message.conversation
+        } else if (message.message?.extendedTextMessage?.text) {
+          content = message.message.extendedTextMessage.text
+        } else if (message.message?.imageMessage?.caption) {
+          content = message.message.imageMessage.caption || '[Imagem]'
+        } else if (message.message?.imageMessage) {
+          content = '[Imagem]'
+        } else if (message.message?.videoMessage) {
+          content = '[Vídeo]'
+        } else if (message.message?.audioMessage) {
+          content = '[Áudio]'
+        } else if (message.message?.documentMessage) {
+          content = '[Documento]'
+        } else if (message.message?.stickerMessage) {
+          content = '[Sticker]'
+        }
 
-         // Obter ID do contato de forma mais robusta
-         let contactId: string | undefined
-         
-         if (Array.isArray(typedConversation.contact)) {
-           contactId = typedConversation.contact[0]?.id
-         } else if (typedConversation.contact && typeof typedConversation.contact === 'object') {
-           contactId = typedConversation.contact.id
-         }
+        const messageData = {
+          id: message.key.id,
+          conversation_id: conversationId,
+          contact_id: contactId,
+          content: content,
+          message_type: getMessageType(message),
+          from_me: Boolean(message.key.fromMe),
+          status: message.status || 'received',
+          timestamp: new Date(message.messageTimestamp * 1000).toISOString(),
+          media_url: message.message?.imageMessage?.url || message.message?.videoMessage?.url || null,
+          metadata: { 
+            originalMessage: message,
+            syncTimestamp: new Date().toISOString()
+          }
+        }
 
-         if (!contactId) {
-           console.error('❌ Contact ID não encontrado:', typedConversation.contact)
-           errorCount++
-           continue
-         }
+        console.log(`💾 Salvando mensagem: ${messageData.id} - ${messageData.content.substring(0, 50)}... - from_me: ${messageData.from_me}`)
 
          // Salvar/atualizar mensagem no banco
          const { error: msgError } = await supabaseAdmin
            .from('messages')
-           .upsert({
-             id: message.key.id,
-             conversation_id: conversationId,
-             contact_id: contactId,
-             content: content,
-             message_type: getMessageType(message),
-             from_me: message.key.fromMe,
-             status: message.status || 'received',
-             timestamp: new Date(message.messageTimestamp * 1000).toISOString(),
-             media_url: message.message?.imageMessage?.url || message.message?.videoMessage?.url || null,
-             metadata: { originalMessage: message }
-           }, {
+           .upsert(messageData, {
              onConflict: 'id'
            })
 
         if (msgError) {
-          console.error('❌ Erro ao salvar mensagem:', msgError)
+          console.error('❌ Erro ao salvar mensagem:', msgError, messageData)
           errorCount++
         } else {
           syncedCount++
+          console.log(`✅ Mensagem salva: ${messageData.id}`)
         }
 
       } catch (error) {
-        console.error('❌ Erro ao processar mensagem:', error)
+        console.error('❌ Erro ao processar mensagem:', error, message.key?.id)
         errorCount++
       }
     }

@@ -34,6 +34,28 @@ export default function ConversationPage() {
     }
   }, [messages])
 
+  // Auto-recarregar mensagens a cada 10 segundos
+  useEffect(() => {
+    if (!conversationId) return
+
+    const interval = setInterval(async () => {
+      try {
+        console.log('🔄 Auto-recarregando mensagens...')
+        const updatedMsgs = await api.getConversationMessages(conversationId)
+        
+        // Só atualizar se há mensagens novas
+        if (updatedMsgs.length !== messages.length) {
+          console.log(`📱 Mensagens atualizadas: ${messages.length} → ${updatedMsgs.length}`)
+          setMessages(updatedMsgs)
+        }
+      } catch (error) {
+        console.error('❌ Erro ao auto-recarregar mensagens:', error)
+      }
+    }, 10000) // 10 segundos
+
+    return () => clearInterval(interval)
+  }, [conversationId, messages.length])
+
   const loadConversationData = async () => {
     try {
       setLoading(true)
@@ -43,33 +65,44 @@ export default function ConversationPage() {
       const conv = conversations.find(c => c.id === conversationId)
       setConversation(conv || null)
 
-      // Buscar mensagens
+      if (!conv) {
+        console.error('❌ Conversa não encontrada!')
+        return
+      }
+
+      console.log('🔍 Carregando mensagens da conversa:', conversationId)
+
+      // Buscar mensagens do banco primeiro
       let msgs = await api.getConversationMessages(conversationId)
+      console.log(`📱 Encontradas ${msgs.length} mensagens no banco`)
       
-      // Se não há mensagens, tentar sincronizar da Evolution API
-      if (msgs.length === 0 && conv) {
-        console.log('🔄 Nenhuma mensagem encontrada, sincronizando da Evolution API...')
-        try {
-          const syncResponse = await fetch(`/api/conversations/${conversationId}/sync-messages`, {
-            method: 'POST'
-          })
+      // SEMPRE sincronizar com a Evolution API para garantir que temos as mensagens mais recentes
+      console.log('🔄 Sincronizando com Evolution API...')
+      try {
+        const syncResponse = await fetch(`/api/conversations/${conversationId}/sync-messages`, {
+          method: 'POST'
+        })
+        
+        if (syncResponse.ok) {
+          const syncData = await syncResponse.json()
+          console.log('✅ Sincronização concluída:', syncData)
           
-          if (syncResponse.ok) {
-            const syncData = await syncResponse.json()
-            console.log('✅ Sincronização automática concluída:', syncData)
-            
-            // Recarregar mensagens após sincronização
-            msgs = await api.getConversationMessages(conversationId)
-          }
-        } catch (syncError) {
-          console.warn('⚠️ Erro na sincronização automática:', syncError)
+          // Recarregar mensagens após sincronização
+          const updatedMsgs = await api.getConversationMessages(conversationId)
+          console.log(`📱 Após sincronização: ${updatedMsgs.length} mensagens`)
+          msgs = updatedMsgs
+        } else {
+          console.error('❌ Erro na sincronização:', syncResponse.status)
         }
+      } catch (syncError) {
+        console.error('❌ Erro na sincronização:', syncError)
+        // Continue com as mensagens que temos, se houver
       }
       
       setMessages(msgs)
       
     } catch (error) {
-      console.error('Erro ao carregar conversa:', error)
+      console.error('❌ Erro ao carregar conversa:', error)
     } finally {
       setLoading(false)
     }

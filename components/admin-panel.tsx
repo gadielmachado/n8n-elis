@@ -10,7 +10,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Settings
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,6 +39,7 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(false)
   const [syncLoading, setSyncLoading] = useState<string | null>(null)
   const [syncResults, setSyncResults] = useState<{ [key: string]: SyncResult }>({})
+  const [webhookResult, setWebhookResult] = useState<any>(null)
 
   useEffect(() => {
     checkHealth()
@@ -114,6 +116,34 @@ export function AdminPanel() {
     }
   }
 
+  const setupWebhooks = async () => {
+    setLoading(true)
+    setWebhookResult(null)
+    
+    try {
+      const response = await fetch('/api/test-webhook-setup', {
+        method: 'POST'
+      })
+      const data = await response.json()
+      setWebhookResult(data)
+      
+      if (data.success) {
+        alert('✅ Webhooks configurados com sucesso!')
+      } else {
+        alert(`❌ Erro ao configurar webhooks: ${data.error}`)
+      }
+    } catch (error) {
+      setWebhookResult({
+        success: false,
+        error: 'Erro ao configurar webhooks',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      })
+      alert('❌ Erro ao configurar webhooks')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getStatusIcon = (healthy: boolean) => {
     return healthy ? (
       <CheckCircle className="w-5 h-5 text-green-500" />
@@ -147,6 +177,14 @@ export function AdminPanel() {
             className="btn btn-secondary"
           >
             {loading ? 'Testando...' : '⚡ Testar Evolution API'}
+          </button>
+
+          <button
+            onClick={setupWebhooks}
+            disabled={loading}
+            className="btn btn-primary"
+          >
+            {loading ? 'Configurando...' : '🔗 Configurar Webhooks'}
           </button>
 
           <button
@@ -330,6 +368,71 @@ export function AdminPanel() {
                 {process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE_NAME || 'Configurado'}
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado da Configuração de Webhooks */}
+      {webhookResult && (
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold mb-4">
+            {webhookResult.success ? '✅ Configuração de Webhooks' : '❌ Configuração de Webhooks'}
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <strong>Status:</strong>
+              <span className={cn(
+                "ml-2",
+                webhookResult.success ? 'text-green-600' : 'text-red-600'
+              )}>
+                {webhookResult.success ? 'Configurado com sucesso' : 'Erro na configuração'}
+              </span>
+            </div>
+            
+            {webhookResult.data && (
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Detalhes da Configuração:</h4>
+                
+                <div className="space-y-2">
+                  <div>
+                    <strong>URL do Webhook:</strong>
+                    <span className="ml-2 text-blue-600 dark:text-blue-400 text-sm break-all">
+                      {webhookResult.data.webhookUrl}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <strong>Health Check:</strong>
+                    <span className={cn(
+                      "ml-2",
+                      webhookResult.data.healthCheck ? 'text-green-600' : 'text-red-600'
+                    )}>
+                      {webhookResult.data.healthCheck ? 'Evolution API Online' : 'Evolution API Offline'}
+                    </span>
+                  </div>
+                  
+                  {webhookResult.data.currentWebhook && (
+                    <div>
+                      <strong>Webhook Atual:</strong>
+                      <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded overflow-auto">
+                        {JSON.stringify(webhookResult.data.currentWebhook, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {!webhookResult.success && (
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2 text-red-700 dark:text-red-300">Erro:</h4>
+                <p className="text-sm text-red-600 dark:text-red-400">{webhookResult.error}</p>
+                {webhookResult.details && (
+                  <p className="text-xs text-red-500 mt-1">{webhookResult.details}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
