@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api-client'
 import { Message, Conversation } from '@/types'
-import { ArrowLeft, Phone, Video, MoreVertical, Send } from 'lucide-react'
+import { ArrowLeft, Phone, Video, MoreVertical, Send, RefreshCw } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -16,6 +16,7 @@ export default function ConversationPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [newMessage, setNewMessage] = useState('')
 
   useEffect(() => {
@@ -34,7 +35,28 @@ export default function ConversationPage() {
       setConversation(conv || null)
 
       // Buscar mensagens
-      const msgs = await api.getConversationMessages(conversationId)
+      let msgs = await api.getConversationMessages(conversationId)
+      
+      // Se não há mensagens, tentar sincronizar da Evolution API
+      if (msgs.length === 0 && conv) {
+        console.log('🔄 Nenhuma mensagem encontrada, sincronizando da Evolution API...')
+        try {
+          const syncResponse = await fetch(`/api/conversations/${conversationId}/sync-messages`, {
+            method: 'POST'
+          })
+          
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json()
+            console.log('✅ Sincronização automática concluída:', syncData)
+            
+            // Recarregar mensagens após sincronização
+            msgs = await api.getConversationMessages(conversationId)
+          }
+        } catch (syncError) {
+          console.warn('⚠️ Erro na sincronização automática:', syncError)
+        }
+      }
+      
       setMessages(msgs)
       
     } catch (error) {
@@ -50,6 +72,36 @@ export default function ConversationPage() {
     // TODO: Implementar envio de mensagem via Evolution API
     console.log('Enviar mensagem:', newMessage)
     setNewMessage('')
+  }
+
+  const handleSyncMessages = async () => {
+    try {
+      setSyncing(true)
+      console.log('🔄 Sincronizando mensagens manualmente...')
+      
+      const syncResponse = await fetch(`/api/conversations/${conversationId}/sync-messages`, {
+        method: 'POST'
+      })
+      
+      if (syncResponse.ok) {
+        const syncData = await syncResponse.json()
+        console.log('✅ Sincronização manual concluída:', syncData)
+        
+        // Recarregar mensagens
+        const msgs = await api.getConversationMessages(conversationId)
+        setMessages(msgs)
+        
+        // Mostrar resultado
+        alert(`Sincronização concluída!\n${syncData.synced} mensagens sincronizadas`)
+      } else {
+        throw new Error('Erro na sincronização')
+      }
+    } catch (error) {
+      console.error('❌ Erro na sincronização manual:', error)
+      alert('Erro ao sincronizar mensagens')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   const formatMessageTime = (timestamp: string) => {
@@ -115,6 +167,14 @@ export default function ConversationPage() {
           </div>
           
           <div className="flex items-center gap-2">
+            <button 
+              onClick={handleSyncMessages}
+              disabled={syncing}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              title="Sincronizar mensagens"
+            >
+              <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${syncing ? 'animate-spin' : ''}`} />
+            </button>
             <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
               <Phone className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>

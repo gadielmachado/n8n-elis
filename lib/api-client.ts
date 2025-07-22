@@ -160,6 +160,7 @@ export const apiClient = new ApiClient()
 export const api = {
   getDashboardMetrics: () => apiClient.getDashboardMetrics(),
   getConversations: (status?: string) => apiClient.getConversations(status),
+  getConversationMessages: (conversationId: string) => apiClient.getConversationMessages(conversationId),
   getChartData: () => apiClient.getChartData(),
   getWeeklyData: () => apiClient.getWeeklyData(),
   
