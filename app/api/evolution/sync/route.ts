@@ -132,9 +132,14 @@ async function syncContacts() {
 
 // Sincronizar chats
 async function syncChats() {
+  const logs: string[] = []
+  
   try {
+    logs.push('🔄 Iniciando sincronização de chats...')
     console.log('🔄 Iniciando sincronização de chats...')
+    
     const chats = await evolutionAPI.syncAllChats()
+    logs.push(`📊 Total de chats recebidos: ${chats.length}`)
     console.log(`📊 Total de chats recebidos: ${chats.length}`)
     
     let processedCount = 0
@@ -142,37 +147,50 @@ async function syncChats() {
     
     for (const [index, chat] of chats.entries()) {
       try {
-        console.log(`\n🔍 Processando chat ${index + 1}/${chats.length}:`, {
+        const chatLog = `🔍 Processando chat ${index + 1}/${chats.length}: ${JSON.stringify({
           id: chat.id,
           name: chat.name,
           isGroup: chat.isGroup,
           lastMessageTimestamp: chat.lastMessageTimestamp
-        })
+        })}`
+        
+        logs.push(chatLog)
+        console.log(chatLog)
         
         // Verificar se chat.id existe
         if (!chat.id) {
-          console.warn('⚠️ Chat sem ID:', chat)
+          const warnMsg = '⚠️ Chat sem ID: ' + JSON.stringify(chat)
+          logs.push(warnMsg)
+          console.warn(warnMsg)
           continue
         }
         
         // Pular grupos por enquanto (focar em conversas individuais)
         if (chat.isGroup) {
-          console.log('📝 Pulando grupo:', chat.name || chat.id)
+          const groupMsg = `📝 Pulando grupo: ${chat.name || chat.id}`
+          logs.push(groupMsg)
+          console.log(groupMsg)
           continue
         }
         
         // Extrair telefone do chat ID
         const phone = evolutionAPI.extractPhoneFromJid(chat.id)
-        console.log(`📞 Telefone extraído: "${phone}" do JID: "${chat.id}"`)
+        const phoneMsg = `📞 Telefone extraído: "${phone}" do JID: "${chat.id}"`
+        logs.push(phoneMsg)
+        console.log(phoneMsg)
         
         // Verificar se conseguiu extrair o telefone
         if (!phone || phone.length < 8) {
-          console.warn('⚠️ Telefone inválido extraído:', { phone, jid: chat.id })
+          const phoneWarn = `⚠️ Telefone inválido extraído: ${JSON.stringify({ phone, jid: chat.id })}`
+          logs.push(phoneWarn)
+          console.warn(phoneWarn)
           continue
         }
         
-        // Buscar contato de várias formas para garantir compatibilidade
-        console.log(`🔍 Buscando contato com telefone: "${phone}"`)
+        // Buscar contato
+        const searchMsg = `🔍 Buscando contato com telefone: "${phone}"`
+        logs.push(searchMsg)
+        console.log(searchMsg)
         
         let { data: contact, error: contactError } = await supabaseAdmin
           .from('contacts')
@@ -181,12 +199,16 @@ async function syncChats() {
           .single()
         
         if (contactError && contactError.code !== 'PGRST116') {
-          console.error('❌ Erro ao buscar contato:', contactError)
+          const contactErrorMsg = `❌ Erro ao buscar contato: ${contactError.message}`
+          logs.push(contactErrorMsg)
+          console.error(contactErrorMsg)
         }
         
         // Se não encontrou o contato, tentar criar um básico
         if (!contact) {
-          console.log(`📝 Contato não encontrado, criando contato básico para: ${phone}`)
+          const createMsg = `📝 Contato não encontrado, criando contato básico para: ${phone}`
+          logs.push(createMsg)
+          console.log(createMsg)
           
           const { data: newContact, error: createError } = await supabaseAdmin
             .from('contacts')
@@ -202,20 +224,28 @@ async function syncChats() {
             .single()
           
           if (createError) {
-            console.error('❌ Erro ao criar contato:', createError)
+            const createErrorMsg = `❌ Erro ao criar contato: ${createError.message}`
+            logs.push(createErrorMsg)
+            console.error(createErrorMsg)
             errorCount++
             continue
           }
           
           contact = newContact
-          console.log('✅ Contato criado:', contact)
+          const createdMsg = `✅ Contato criado: ${JSON.stringify(contact)}`
+          logs.push(createdMsg)
+          console.log(createdMsg)
         } else {
-          console.log('✅ Contato encontrado:', contact)
+          const foundMsg = `✅ Contato encontrado: ${JSON.stringify(contact)}`
+          logs.push(foundMsg)
+          console.log(foundMsg)
         }
         
         if (contact && contact.id) {
           // Criar ou atualizar conversa
-          console.log(`💬 Criando/atualizando conversa para contato ID: ${contact.id}`)
+          const convMsg = `💬 Criando/atualizando conversa para contato ID: ${contact.id}`
+          logs.push(convMsg)
+          console.log(convMsg)
           
           const lastMessageAt = chat.lastMessageTimestamp 
             ? new Date(chat.lastMessageTimestamp * 1000).toISOString()
@@ -237,36 +267,46 @@ async function syncChats() {
             .single()
           
           if (convError) {
-            console.error('❌ Erro ao criar conversa:', convError)
+            const convErrorMsg = `❌ Erro ao criar conversa: ${convError.message}`
+            logs.push(convErrorMsg)
+            console.error(convErrorMsg)
             errorCount++
           } else {
-            console.log('✅ Conversa criada/atualizada:', conversation)
+            const convSuccessMsg = `✅ Conversa criada/atualizada: ${JSON.stringify(conversation)}`
+            logs.push(convSuccessMsg)
+            console.log(convSuccessMsg)
             processedCount++
           }
         } else {
-          console.error('❌ Erro: Contato sem ID válido:', contact)
+          const contactIdErrorMsg = `❌ Erro: Contato sem ID válido: ${JSON.stringify(contact)}`
+          logs.push(contactIdErrorMsg)
+          console.error(contactIdErrorMsg)
           errorCount++
         }
         
       } catch (error) {
-        console.error('❌ Erro ao processar chat:', error)
+        const chatErrorMsg = `❌ Erro ao processar chat: ${error instanceof Error ? error.message : String(error)}`
+        logs.push(chatErrorMsg)
+        console.error(chatErrorMsg)
         errorCount++
       }
     }
     
-    console.log(`\n📊 Resultado da sincronização de chats:`)
-    console.log(`  Total: ${chats.length}`)
-    console.log(`  Processados: ${processedCount}`)
-    console.log(`  Erros: ${errorCount}`)
+    const resultMsg = `📊 Resultado da sincronização de chats: Total: ${chats.length}, Processados: ${processedCount}, Erros: ${errorCount}`
+    logs.push(resultMsg)
+    console.log(resultMsg)
     
     return {
       total: chats.length,
       processed: processedCount,
-      errors: errorCount
+      errors: errorCount,
+      logs: logs  // ← Retornar logs para debug
     }
     
   } catch (error) {
-    console.error('❌ Erro ao sincronizar chats:', error)
+    const errorMsg = `❌ Erro ao sincronizar chats: ${error instanceof Error ? error.message : String(error)}`
+    logs.push(errorMsg)
+    console.error(errorMsg)
     throw error
   }
 }
