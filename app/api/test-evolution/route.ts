@@ -132,7 +132,7 @@ export async function GET() {
     // Teste 4: Tentar buscar dados básicos (chats)
     try {
       console.log('🔍 Testando busca de chats...')
-      const chatsResponse = await axios.get(`${evolutionUrl}/chat/findChats/${evolutionInstance}`, {
+      const chatsResponse = await axios.post(`${evolutionUrl}/chat/findChats/${evolutionInstance}`, {}, {
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionToken
@@ -160,7 +160,7 @@ export async function GET() {
     // Teste 5: Testar busca de contatos
     try {
       console.log('🔍 Testando busca de contatos...')
-      const contactsResponse = await axios.get(`${evolutionUrl}/chat/findContacts/${evolutionInstance}`, {
+      const contactsResponse = await axios.post(`${evolutionUrl}/chat/findContacts/${evolutionInstance}`, {}, {
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionToken
