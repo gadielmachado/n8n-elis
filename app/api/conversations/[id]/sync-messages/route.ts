@@ -17,7 +17,7 @@ export async function POST(
       .select(`
         id,
         remote_jid,
-        contact:contacts(phone, name)
+        contact:contacts(id, phone, name)
       `)
       .eq('id', conversationId)
       .single()
@@ -57,23 +57,34 @@ export async function POST(
                        message.message?.imageMessage?.caption ||
                        '[Mídia]'
 
-        // Salvar/atualizar mensagem no banco
-        const { error: msgError } = await supabaseAdmin
-          .from('messages')
-          .upsert({
-            id: message.key.id,
-            conversation_id: conversationId,
-            contact_id: conversation.contact.id,
-            content: content,
-            message_type: getMessageType(message),
-            from_me: message.key.fromMe,
-            status: message.status || 'received',
-            timestamp: new Date(message.messageTimestamp * 1000).toISOString(),
-            media_url: message.message?.imageMessage?.url || message.message?.videoMessage?.url || null,
-            metadata: { originalMessage: message }
-          }, {
-            onConflict: 'id'
-          })
+                 // Obter ID do contato (pode ser array ou objeto)
+         const contactId = Array.isArray(conversation.contact) 
+           ? conversation.contact[0]?.id 
+           : conversation.contact?.id
+
+         if (!contactId) {
+           console.error('❌ Contact ID não encontrado:', conversation.contact)
+           errorCount++
+           continue
+         }
+
+         // Salvar/atualizar mensagem no banco
+         const { error: msgError } = await supabaseAdmin
+           .from('messages')
+           .upsert({
+             id: message.key.id,
+             conversation_id: conversationId,
+             contact_id: contactId,
+             content: content,
+             message_type: getMessageType(message),
+             from_me: message.key.fromMe,
+             status: message.status || 'received',
+             timestamp: new Date(message.messageTimestamp * 1000).toISOString(),
+             media_url: message.message?.imageMessage?.url || message.message?.videoMessage?.url || null,
+             metadata: { originalMessage: message }
+           }, {
+             onConflict: 'id'
+           })
 
         if (msgError) {
           console.error('❌ Erro ao salvar mensagem:', msgError)
@@ -99,6 +110,11 @@ export async function POST(
 
     console.log(`✅ Sincronização concluída: ${syncedCount} mensagens sincronizadas, ${errorCount} erros`)
 
+    // Obter dados do contato (pode ser array ou objeto)
+    const contactData = Array.isArray(conversation.contact) 
+      ? conversation.contact[0] 
+      : conversation.contact
+
     return NextResponse.json({
       success: true,
       synced: syncedCount,
@@ -106,8 +122,8 @@ export async function POST(
       total: messages.length,
       conversation: {
         id: conversationId,
-        contact: conversation.contact.name,
-        phone: conversation.contact.phone
+        contact: contactData?.name || 'Nome não disponível',
+        phone: contactData?.phone || 'Telefone não disponível'
       },
       timestamp: new Date().toISOString()
     })
