@@ -114,12 +114,9 @@ export default function ConversasPage() {
   ]
 
   const handleConversationClick = (conversation: Conversation) => {
-    // Aqui seria implementada a navegação para visualizar a conversa completa
+    // Navegar para a página de conversa individual
     console.log('Abrir conversa:', conversation.id)
-    // Exemplo: router.push(`/conversas/${conversation.id}`)
-    
-    // Por enquanto, mostrar detalhes em alert
-    alert(`Conversa com ${conversation.contact.name}\nTelefone: ${conversation.contact.phone}\nStatus: ${conversation.status}\nMensagens: ${conversation.messagesCount}`)
+    window.location.href = `/conversas/${conversation.id}`
   }
 
   if (loading && conversations.length === 0) {

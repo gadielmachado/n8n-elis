@@ -111,6 +111,11 @@ class ApiClient {
     return response.data
   }
 
+  async getConversationMessages(conversationId: string): Promise<Message[]> {
+    const response = await this.client.get(`/api/conversations/${conversationId}/messages`)
+    return response.data.messages
+  }
+
   // Evolution API Sync
   async syncEvolutionData(type: 'messages' | 'contacts' | 'chats' | 'all', limit?: number): Promise<any> {
     const response = await this.client.post('/api/evolution/sync', {

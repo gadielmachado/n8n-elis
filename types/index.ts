@@ -11,6 +11,9 @@ export interface Message {
   timestamp: string // API retorna como string ISO, não Date
   fromContact: boolean
   read: boolean
+  messageType?: string // 'text', 'image', 'audio', 'video', etc.
+  mediaUrl?: string // URL da mídia se aplicável
+  quotedMessageId?: string // ID da mensagem citada se aplicável
 }
 
 export interface Conversation {
