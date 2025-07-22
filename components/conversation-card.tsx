@@ -40,7 +40,7 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
   const status = statusConfig[conversation.status]
   const StatusIcon = status.icon
   
-  const timeAgo = formatDistanceToNow(conversation.updatedAt, {
+  const timeAgo = formatDistanceToNow(new Date(conversation.updatedAt), {
     addSuffix: true,
     locale: ptBR
   })
