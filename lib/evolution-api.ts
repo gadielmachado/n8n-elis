@@ -31,12 +31,35 @@ export interface EvolutionContact {
 }
 
 export interface EvolutionChat {
-  id: string
+  id: string | null
   name?: string
   isGroup: boolean
   unreadCount: number
   lastMessageTimestamp: number
   archived: boolean
+  isSaved?: boolean
+  lastMessage?: {
+    id: string
+    key: {
+      id: string
+      fromMe: boolean
+      remoteJid: string
+      senderLid?: string
+    }
+    pushName?: string
+    participant?: string | null
+    messageType: string
+    message: {
+      conversation?: string
+      messageContextInfo?: any
+    }
+    contextInfo?: any
+    source: string
+    messageTimestamp: number
+    instanceId: string
+    sessionId?: string | null
+    status: string
+  }
 }
 
 export interface EvolutionWebhookPayload {
