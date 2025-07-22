@@ -129,9 +129,10 @@ export async function GET() {
       }, { status: 500 })
     }
     
-    // Teste 4: Tentar buscar dados básicos
+    // Teste 4: Tentar buscar dados básicos (chats)
     try {
-      const response = await axios.get(`${evolutionUrl}/instance/connectionState/${evolutionInstance}`, {
+      console.log('🔍 Testando busca de chats...')
+      const chatsResponse = await axios.get(`${evolutionUrl}/chat/findChats/${evolutionInstance}`, {
         headers: {
           'Content-Type': 'application/json',
           'apikey': evolutionToken
@@ -139,16 +140,48 @@ export async function GET() {
         timeout: 10000
       })
       
-      testResults.tests.dataAccess = {
+      testResults.tests.chatsAccess = {
         success: true,
-        status: response.status,
-        connectionState: response.data?.state || 'unknown'
+        status: chatsResponse.status,
+        totalChats: Array.isArray(chatsResponse.data) ? chatsResponse.data.length : 'unknown',
+        sampleData: Array.isArray(chatsResponse.data) ? chatsResponse.data.slice(0, 2) : chatsResponse.data
       }
       
     } catch (error: any) {
-      testResults.tests.dataAccess = {
+      console.error('❌ Erro ao buscar chats:', error.message)
+      testResults.tests.chatsAccess = {
         success: false,
-        error: error.message
+        error: error.message,
+        status: error.response?.status,
+        details: error.response?.data
+      }
+    }
+    
+    // Teste 5: Testar busca de contatos
+    try {
+      console.log('🔍 Testando busca de contatos...')
+      const contactsResponse = await axios.get(`${evolutionUrl}/chat/findContacts/${evolutionInstance}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionToken
+        },
+        timeout: 10000
+      })
+      
+      testResults.tests.contactsAccess = {
+        success: true,
+        status: contactsResponse.status,
+        totalContacts: Array.isArray(contactsResponse.data) ? contactsResponse.data.length : 'unknown',
+        sampleData: Array.isArray(contactsResponse.data) ? contactsResponse.data.slice(0, 2) : contactsResponse.data
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar contatos:', error.message)
+      testResults.tests.contactsAccess = {
+        success: false,
+        error: error.message,
+        status: error.response?.status,
+        details: error.response?.data
       }
     }
     

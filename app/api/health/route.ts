@@ -43,30 +43,49 @@ export async function GET() {
 
   // Verificar Evolution API
   try {
+    console.log('🔍 Testando Evolution API...')
     const isHealthy = await evolutionAPI.healthCheck()
     healthStatus.services.evolution_api = isHealthy
     
     if (isHealthy) {
-      const instanceInfo = await evolutionAPI.getConnectionState()
-      healthStatus.details.evolution_api = {
-        connected: true,
-        instance: process.env.EVOLUTION_INSTANCE_NAME,
-        state: instanceInfo.state,
-        url: process.env.EVOLUTION_API_URL
+      console.log('✅ Evolution API saudável, buscando info da instância...')
+      try {
+        const instanceInfo = await evolutionAPI.getConnectionState()
+        healthStatus.details.evolution_api = {
+          connected: true,
+          instance: process.env.EVOLUTION_INSTANCE_NAME,
+          state: instanceInfo.state,
+          url: process.env.EVOLUTION_API_URL
+        }
+        console.log('✅ Info da instância obtida:', instanceInfo.state)
+      } catch (instanceError) {
+        console.warn('⚠️ Erro ao buscar info da instância, mas API está saudável:', instanceError)
+        healthStatus.details.evolution_api = {
+          connected: true,
+          instance: process.env.EVOLUTION_INSTANCE_NAME,
+          state: 'unknown',
+          url: process.env.EVOLUTION_API_URL,
+          warning: 'Instance info unavailable'
+        }
       }
     } else {
+      console.log('❌ Evolution API não está saudável')
       healthStatus.details.evolution_api = {
         connected: false,
         instance: process.env.EVOLUTION_INSTANCE_NAME,
-        url: process.env.EVOLUTION_API_URL
+        url: process.env.EVOLUTION_API_URL,
+        error: 'Health check failed'
       }
     }
   } catch (error) {
+    console.error('❌ Erro ao verificar Evolution API:', error)
     healthStatus.services.evolution_api = false
     healthStatus.details.evolution_api = {
       connected: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      url: process.env.EVOLUTION_API_URL
+      url: process.env.EVOLUTION_API_URL,
+      instance: process.env.EVOLUTION_INSTANCE_NAME,
+      details: error instanceof Error ? error.stack : null
     }
   }
 
@@ -110,10 +129,25 @@ export async function GET() {
 
   // Determinar status geral
   const allHealthy = Object.values(healthStatus.services).every(Boolean)
+  const criticalServicesHealthy = healthStatus.services.database && healthStatus.services.evolution_api
+  
   healthStatus.status = allHealthy ? 'healthy' : 'degraded'
 
-  // Status HTTP baseado na saúde geral
-  const httpStatus = allHealthy ? 200 : 503
+  // Status HTTP baseado apenas nos serviços críticos
+  // n8n é opcional, não deve quebrar a aplicação
+  const httpStatus = criticalServicesHealthy ? 200 : 503
+
+  console.log('🔍 Health Check Result:', {
+    allHealthy,
+    criticalServicesHealthy,
+    httpStatus,
+    services: healthStatus.services,
+    details: Object.keys(healthStatus.details).map(service => ({
+      service,
+      connected: healthStatus.details[service]?.connected || false,
+      error: healthStatus.details[service]?.error || null
+    }))
+  })
 
   return NextResponse.json(healthStatus, { status: httpStatus })
 }
