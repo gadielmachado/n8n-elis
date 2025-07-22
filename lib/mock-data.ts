@@ -41,7 +41,7 @@ const mockContacts: Contact[] = [
 ]
 
 // Mensagens mockadas
-const createMockMessage = (id: string, content: string, fromContact: boolean, timestamp: Date): Message => ({
+const createMockMessage = (id: string, content: string, fromContact: boolean, timestamp: string): Message => ({
   id,
   content,
   fromContact,
@@ -55,60 +55,60 @@ export const mockConversations: Conversation[] = [
     id: '1',
     contact: mockContacts[0],
     status: 'waiting',
-    lastMessage: createMockMessage('m1', 'Olá! Gostaria de saber mais sobre seus serviços.', true, new Date(Date.now() - 1000 * 60 * 30)),
+    lastMessage: createMockMessage('m1', 'Olá! Gostaria de saber mais sobre seus serviços.', true, new Date(Date.now() - 1000 * 60 * 30).toISOString()),
     messagesCount: 3,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
     tags: ['novo-lead', 'interessado']
   },
   {
     id: '2',
     contact: mockContacts[1],
     status: 'initiated',
-    lastMessage: createMockMessage('m2', 'Obrigado pelo contato! Em breve retornaremos.', false, new Date(Date.now() - 1000 * 60 * 15)),
+    lastMessage: createMockMessage('m2', 'Obrigado pelo contato! Em breve retornaremos.', false, new Date(Date.now() - 1000 * 60 * 15).toISOString()),
     messagesCount: 5,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 15),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
     tags: ['follow-up']
   },
   {
     id: '3',
     contact: mockContacts[2],
     status: 'finished',
-    lastMessage: createMockMessage('m3', 'Perfeito! Obrigada pela atenção.', true, new Date(Date.now() - 1000 * 60 * 60 * 4)),
+    lastMessage: createMockMessage('m3', 'Perfeito! Obrigada pela atenção.', true, new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()),
     messagesCount: 8,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 4),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
     tags: ['convertido', 'sucesso']
   },
   {
     id: '4',
     contact: mockContacts[3],
     status: 'waiting',
-    lastMessage: createMockMessage('m4', 'Preciso de mais informações sobre preços.', true, new Date(Date.now() - 1000 * 60 * 45)),
+    lastMessage: createMockMessage('m4', 'Preciso de mais informações sobre preços.', true, new Date(Date.now() - 1000 * 60 * 45).toISOString()),
     messagesCount: 2,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 45),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     tags: ['pricing', 'hot-lead']
   },
   {
     id: '5',
     contact: mockContacts[4],
     status: 'initiated',
-    lastMessage: createMockMessage('m5', 'Oi! Vi seu anúncio no Instagram.', true, new Date(Date.now() - 1000 * 60 * 10)),
+    lastMessage: createMockMessage('m5', 'Oi! Vi seu anúncio no Instagram.', true, new Date(Date.now() - 1000 * 60 * 10).toISOString()),
     messagesCount: 1,
-    createdAt: new Date(Date.now() - 1000 * 60 * 10),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 10),
+    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     tags: ['instagram', 'novo-lead']
   },
   {
     id: '6',
     contact: mockContacts[5],
     status: 'finished',
-    lastMessage: createMockMessage('m6', 'Fechado! Aguardo o contrato.', true, new Date(Date.now() - 1000 * 60 * 60 * 12)),
+    lastMessage: createMockMessage('m6', 'Fechado! Aguardo o contrato.', true, new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString()),
     messagesCount: 15,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
     tags: ['convertido', 'contrato']
   }
 ]
