@@ -75,6 +75,26 @@ export interface SyncOptions {
   limit?: number
 }
 
+export interface FindMessagesParams {
+  where?: {
+    owner?: string
+    key?: {
+      remoteJid?: string
+      fromMe?: boolean
+      id?: string
+    }
+  }
+  page?: number
+  offset?: number
+  limit?: number
+}
+
+export interface FindChatsParams {
+  page?: number
+  offset?: number
+  limit?: number
+}
+
 // Função para validar e obter variáveis de ambiente da Evolution API
 function getEvolutionEnvVar(name: string): string {
   const value = process.env[name]
