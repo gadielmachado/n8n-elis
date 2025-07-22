@@ -56,7 +56,12 @@ export default function ConversasPage() {
     }
 
     // Ordenar por data de atualização (mais recentes primeiro)
-    filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    filtered.sort((a, b) => {
+      // Converter strings de data para objetos Date para comparação
+      const dateA = new Date(a.updatedAt)
+      const dateB = new Date(b.updatedAt)
+      return dateB.getTime() - dateA.getTime()
+    })
 
     setFilteredConversations(filtered)
   }

@@ -8,7 +8,7 @@ export interface Contact {
 export interface Message {
   id: string
   content: string
-  timestamp: Date
+  timestamp: string // API retorna como string ISO, não Date
   fromContact: boolean
   read: boolean
 }
@@ -19,8 +19,8 @@ export interface Conversation {
   status: 'initiated' | 'waiting' | 'finished'
   lastMessage: Message
   messagesCount: number
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string // API retorna como string ISO, não Date
+  updatedAt: string // API retorna como string ISO, não Date
   tags?: string[]
 }
 
