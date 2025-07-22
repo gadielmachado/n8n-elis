@@ -133,56 +133,136 @@ async function syncContacts() {
 // Sincronizar chats
 async function syncChats() {
   try {
+    console.log('🔄 Iniciando sincronização de chats...')
     const chats = await evolutionAPI.syncAllChats()
-    let processedCount = 0
+    console.log(`📊 Total de chats recebidos: ${chats.length}`)
     
-    for (const chat of chats) {
+    let processedCount = 0
+    let errorCount = 0
+    
+    for (const [index, chat] of chats.entries()) {
       try {
+        console.log(`\n🔍 Processando chat ${index + 1}/${chats.length}:`, {
+          id: chat.id,
+          name: chat.name,
+          isGroup: chat.isGroup,
+          lastMessageTimestamp: chat.lastMessageTimestamp
+        })
+        
         // Verificar se chat.id existe
         if (!chat.id) {
           console.warn('⚠️ Chat sem ID:', chat)
           continue
         }
         
-        // Extrair telefone do chat ID
-        const phone = evolutionAPI.extractPhoneFromJid(chat.id)
-        
-        // Verificar se conseguiu extrair o telefone
-        if (!phone) {
-          console.warn('⚠️ Não foi possível extrair telefone do chat:', chat.id)
+        // Pular grupos por enquanto (focar em conversas individuais)
+        if (chat.isGroup) {
+          console.log('📝 Pulando grupo:', chat.name || chat.id)
           continue
         }
         
-        // Buscar ou criar contato
-        const { data: contact } = await supabaseAdmin
+        // Extrair telefone do chat ID
+        const phone = evolutionAPI.extractPhoneFromJid(chat.id)
+        console.log(`📞 Telefone extraído: "${phone}" do JID: "${chat.id}"`)
+        
+        // Verificar se conseguiu extrair o telefone
+        if (!phone || phone.length < 8) {
+          console.warn('⚠️ Telefone inválido extraído:', { phone, jid: chat.id })
+          continue
+        }
+        
+        // Buscar contato de várias formas para garantir compatibilidade
+        console.log(`🔍 Buscando contato com telefone: "${phone}"`)
+        
+        let { data: contact, error: contactError } = await supabaseAdmin
           .from('contacts')
-          .select('id')
+          .select('id, phone, name')
           .eq('phone', phone)
           .single()
         
-        if (contact) {
+        if (contactError && contactError.code !== 'PGRST116') {
+          console.error('❌ Erro ao buscar contato:', contactError)
+        }
+        
+        // Se não encontrou o contato, tentar criar um básico
+        if (!contact) {
+          console.log(`📝 Contato não encontrado, criando contato básico para: ${phone}`)
+          
+          const { data: newContact, error: createError } = await supabaseAdmin
+            .from('contacts')
+            .upsert({
+              phone,
+              name: chat.name || `Contato ${phone}`,
+              push_name: chat.name || `Contato ${phone}`,
+              last_seen: new Date().toISOString()
+            }, {
+              onConflict: 'phone'
+            })
+            .select('id, phone, name')
+            .single()
+          
+          if (createError) {
+            console.error('❌ Erro ao criar contato:', createError)
+            errorCount++
+            continue
+          }
+          
+          contact = newContact
+          console.log('✅ Contato criado:', contact)
+        } else {
+          console.log('✅ Contato encontrado:', contact)
+        }
+        
+        if (contact && contact.id) {
           // Criar ou atualizar conversa
-          await supabaseAdmin
+          console.log(`💬 Criando/atualizando conversa para contato ID: ${contact.id}`)
+          
+          const lastMessageAt = chat.lastMessageTimestamp 
+            ? new Date(chat.lastMessageTimestamp * 1000).toISOString()
+            : new Date().toISOString()
+          
+          const { data: conversation, error: convError } = await supabaseAdmin
             .from('conversations')
             .upsert({
               contact_id: contact.id,
               remote_jid: chat.id,
               status: chat.archived ? 'archived' : 'active',
-              last_message_at: new Date(chat.lastMessageTimestamp * 1000).toISOString()
+              last_message_at: lastMessageAt,
+              messages_count: 0,
+              updated_at: new Date().toISOString()
             }, {
               onConflict: 'remote_jid'
             })
+            .select('id')
+            .single()
           
-          processedCount++
+          if (convError) {
+            console.error('❌ Erro ao criar conversa:', convError)
+            errorCount++
+          } else {
+            console.log('✅ Conversa criada/atualizada:', conversation)
+            processedCount++
+          }
+        } else {
+          console.error('❌ Erro: Contato sem ID válido:', contact)
+          errorCount++
         }
+        
       } catch (error) {
-        console.error('Erro ao processar chat:', error)
+        console.error('❌ Erro ao processar chat:', error)
+        errorCount++
       }
     }
     
+    console.log(`\n📊 Resultado da sincronização de chats:`)
+    console.log(`  Total: ${chats.length}`)
+    console.log(`  Processados: ${processedCount}`)
+    console.log(`  Erros: ${errorCount}`)
+    
     return {
       total: chats.length,
-      processed: processedCount
+      processed: processedCount,
+      errors: errorCount
     }
     
   } catch (error) {
