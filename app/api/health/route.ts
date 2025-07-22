@@ -142,11 +142,14 @@ export async function GET() {
     criticalServicesHealthy,
     httpStatus,
     services: healthStatus.services,
-    details: Object.keys(healthStatus.details).map(service => ({
-      service,
-      connected: healthStatus.details[service]?.connected || false,
-      error: healthStatus.details[service]?.error || null
-    }))
+    details: Object.keys(healthStatus.details).map(service => {
+      const serviceDetails = healthStatus.details[service as keyof typeof healthStatus.details]
+      return {
+        service,
+        connected: serviceDetails?.connected || false,
+        error: serviceDetails?.error || null
+      }
+    })
   })
 
   return NextResponse.json(healthStatus, { status: httpStatus })
