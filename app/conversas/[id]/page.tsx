@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api-client'
 import { Message, Conversation } from '@/types'
@@ -17,13 +17,22 @@ export default function ConversationPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [sending, setSending] = useState(false)
   const [newMessage, setNewMessage] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (conversationId) {
       loadConversationData()
     }
   }, [conversationId])
+
+  // Scroll automático para o final das mensagens
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
 
   const loadConversationData = async () => {
     try {
@@ -67,11 +76,55 @@ export default function ConversationPage() {
   }
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || sending) return
     
-    // TODO: Implementar envio de mensagem via Evolution API
-    console.log('Enviar mensagem:', newMessage)
-    setNewMessage('')
+    try {
+      setSending(true)
+      console.log('Enviar mensagem:', newMessage)
+      
+      // Adicionar mensagem temporária na interface (otimistic update)
+      const tempMessage: Message = {
+        id: `temp_${Date.now()}`,
+        content: newMessage,
+        timestamp: new Date().toISOString(),
+        fromContact: false,
+        read: true,
+        messageType: 'text'
+      }
+      
+      setMessages(prev => [...prev, tempMessage])
+      
+      // Limpar campo de input imediatamente
+      const messageToSend = newMessage
+      setNewMessage('')
+      
+      // Enviar mensagem via API
+      const response = await api.sendMessage(conversationId, messageToSend)
+      
+      if (response.success) {
+        console.log('✅ Mensagem enviada com sucesso!')
+        
+        // Recarregar mensagens para obter dados atualizados do servidor
+        const updatedMessages = await api.getConversationMessages(conversationId)
+        setMessages(updatedMessages)
+        
+      } else {
+        throw new Error(response.error || 'Erro ao enviar mensagem')
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao enviar mensagem:', error)
+      
+      // Remover mensagem temporária em caso de erro
+      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp_')))
+      
+      // Restaurar texto no input
+      setNewMessage(newMessage)
+      
+      alert('Erro ao enviar mensagem. Tente novamente.')
+    } finally {
+      setSending(false)
+    }
   }
 
   const handleSyncMessages = async () => {
@@ -221,6 +274,8 @@ export default function ConversationPage() {
             </div>
           ))
         )}
+        {/* Elemento para scroll automático */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}
@@ -230,16 +285,25 @@ export default function ConversationPage() {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSendMessage()
+              }
+            }}
             placeholder="Digite sua mensagem..."
             className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-colors"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sending}
             className="p-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-full transition-colors"
           >
-            <Send className="w-5 h-5" />
+            {sending ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>

@@ -116,6 +116,14 @@ class ApiClient {
     return response.data.messages
   }
 
+  async sendMessage(conversationId: string, message: string, messageType: string = 'text'): Promise<any> {
+    const response = await this.client.post(`/api/conversations/${conversationId}/send-message`, {
+      message,
+      messageType
+    })
+    return response.data
+  }
+
   // Evolution API Sync
   async syncEvolutionData(type: 'messages' | 'contacts' | 'chats' | 'all', limit?: number): Promise<any> {
     const response = await this.client.post('/api/evolution/sync', {
@@ -161,6 +169,7 @@ export const api = {
   getDashboardMetrics: () => apiClient.getDashboardMetrics(),
   getConversations: (status?: string) => apiClient.getConversations(status),
   getConversationMessages: (conversationId: string) => apiClient.getConversationMessages(conversationId),
+  sendMessage: (conversationId: string, message: string, messageType?: string) => apiClient.sendMessage(conversationId, message, messageType),
   getChartData: () => apiClient.getChartData(),
   getWeeklyData: () => apiClient.getWeeklyData(),
   

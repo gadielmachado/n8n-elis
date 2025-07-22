@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS messages (
   from_me BOOLEAN DEFAULT FALSE,
   status VARCHAR(50) DEFAULT 'received',
   timestamp TIMESTAMP WITH TIME ZONE,
+  media_url TEXT, -- URL da mídia (imagem, vídeo, áudio, documento)
+  quoted_message_id VARCHAR(255), -- ID da mensagem citada
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   metadata JSONB DEFAULT '{}'::jsonb
 );
@@ -197,4 +199,20 @@ CREATE POLICY "Allow all operations" ON dashboard_metrics FOR ALL USING (true);
 CREATE POLICY "Allow all operations" ON webhook_logs FOR ALL USING (true);
 
 -- 12. Executar cálculo inicial das métricas
-SELECT calculate_daily_metrics(); 
+SELECT calculate_daily_metrics();
+
+-- 13. Adicionar colunas que podem estar faltando na tabela messages (migração)
+DO $$ 
+BEGIN
+    -- Adicionar media_url se não existir
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'messages' AND column_name = 'media_url') THEN
+        ALTER TABLE messages ADD COLUMN media_url TEXT;
+    END IF;
+    
+    -- Adicionar quoted_message_id se não existir
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'messages' AND column_name = 'quoted_message_id') THEN
+        ALTER TABLE messages ADD COLUMN quoted_message_id VARCHAR(255);
+    END IF;
+END $$; 

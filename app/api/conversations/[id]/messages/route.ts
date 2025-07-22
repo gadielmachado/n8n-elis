@@ -38,12 +38,12 @@ export async function GET(
     const processedMessages = messages?.map((msg: any) => ({
       id: msg.id,
       content: msg.content || '[Mídia]',
-      timestamp: new Date(msg.timestamp).toISOString(),
+      timestamp: msg.timestamp ? new Date(msg.timestamp).toISOString() : new Date().toISOString(),
       fromContact: !msg.from_me, // Invertido: from_me=true significa que enviamos
       read: true,
       messageType: msg.message_type || 'text',
-      mediaUrl: msg.media_url,
-      quotedMessageId: msg.quoted_message_id
+      mediaUrl: msg.media_url || null,
+      quotedMessageId: msg.quoted_message_id || null
     })) || []
 
     console.log(`✅ Encontradas ${processedMessages.length} mensagens`)
