@@ -89,19 +89,19 @@ export async function GET(request: NextRequest) {
           lastMessage: lastMessage ? {
             id: lastMessage.id,
             content: lastMessage.content || '[Mídia]',
-            timestamp: new Date(lastMessage.timestamp),
+            timestamp: new Date(lastMessage.timestamp).toISOString(),
             fromContact: !lastMessage.from_me,
             read: true
           } : {
             id: '',
             content: 'Sem mensagens',
-            timestamp: new Date(conv.created_at),
+            timestamp: new Date(conv.created_at).toISOString(),
             fromContact: false,
             read: true
           },
           messagesCount: conv.messages_count || 0,
-          createdAt: new Date(conv.created_at),
-          updatedAt: new Date(conv.updated_at),
+          createdAt: new Date(conv.created_at).toISOString(),
+          updatedAt: new Date(conv.updated_at).toISOString(),
           tags: [] // Implementar sistema de tags depois
         }
       }) || []
